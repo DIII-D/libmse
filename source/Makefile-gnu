@@ -1,0 +1,91 @@
+#
+# MSE_SOURCE_DIR:MAKEFILE.
+#
+# See the README file
+# 
+# 
+
+VER=V5_02-gcc8.x
+LIBIDL=/fusion/usc/src/libidl_ga
+LIBD3=-L${LIBS_DIR} -ld3
+LIBD3=/fusion/usc/opt/env/gcc9.2-pgf18.3/lib/libd3.a
+FFLAGS=  -fPIC -fall-intrinsics -g -I${MDSPLUS}/include -I/fusion/usc/src/libidl_ga -fdollar-ok -std=legacy
+LDFLAGS=-g
+CFLAGS=   -fPIC -Dlinux -I${IDL_DIR}/external/include -g -I${MDSPLUS}/include 
+LIBS= ${LIBD3}  -L${MDSPLUS}/lib -lMdsLib_client -lgfortran
+FC=gfortran
+CC=gcc
+SHELL=/bin/tcsh
+
+fsources = mse_lib2.f stark2.f get_mse_configuration.f 
+csources = mse2_0.c
+f_objs =   mse_lib2.o stark2.o get_mse_configuration.o
+c_objs =   mse2_0.o
+GETDAT = 
+GETDAT = getdat.o getdat_camac.o getdatt_camac.o l_dfi.o
+
+
+all: $(GETDAT) libmse.so libmse.a  libmseidl.so run_stark test_stark
+# wr_pcs_mse_setup
+
+$(f_objs): mse_lib2.inc
+
+libmse.a: $(f_objs) $(c_objs) $(GETDAT)
+	ar -cr libmse.a $(f_objs) $(c_objs) $(GETDAT)
+
+libmse.so:  Makefile $(f_objs) 
+	@echo "Building libmse.so"
+	$(FC) $(f_objs) -o libmse.so -shared $(LIBS) $(GETDAT)
+	chmod 775 libmse.so
+
+libmseidl.so:  Makefile $(f_objs) $(c_objs)
+	@echo "Building libmseidl.so"
+	$(FC) $(f_objs) $(c_objs) -o libmseidl.so -shared $(LIBS)  $(GETDAT)
+	chmod 775 libmseidl.so
+
+getdat.o: $(LIBIDL)/getdat.f
+	$(FC) $(FFLAGS) $? -c 
+getdat_camac.o: $(LIBIDL)/getdat_camac.f
+	$(FC) $(FFLAGS) $? -c 
+getdatt_camac.o: $(LIBIDL)/getdatt_camac.f
+	$(FC) $(FFLAGS) $? -c 
+l_dfi.o: $(LIBIDL)/l_dfi.f
+	$(FC) $(FFLAGS) $? -c 
+
+#wr_pcs_mse_setup: wr_pcs_mse_setup.o
+#	$(FC) $(FFLAGS) -o wr_pcs_mse_setup wr_pcs_mse_setup.o  -L./ -lmselinux  $(LIBS)
+
+#wr_pcs_mse_setup.o: wr_pcs_mse_setup.f
+#	$(FC) $(FFLAGS) -c wr_pcs_mse_setup.f 
+
+run_stark: run_stark.o libmse.a
+	$(FC) $(FFLAGS) $(LDFLAGS) -o run_stark run_stark.o libmse.a  $(LIBS) 
+test_stark: test_stark.o libmse.a
+	$(FC) $(FFLAGS) $(LDFLAGS) -o test_stark test_stark.o libmse.a  $(LIBS) 
+
+tests:
+	@echo "Build tests..."
+	cd tests
+	make
+	cd ..
+
+clean:
+	rm -f *.o *.a *.so wr_pcs_mse_setup
+
+
+install: libmse.so libmse.a
+	@echo "Copying libmse.so to ../lib directory."
+	cp -f libmse.so ../lib/libmse.so
+	cp -f libmse.a ../lib/libmse.a
+	cp -f libmseidl.so ../lib/libmseidl.so
+
+public: libmse.so libmse.a
+	@echo "Copying libmse.so to $(MSE_DIR)/lib/$(VER) directory."
+	mkdir -p $(MSE_DIR)/lib/$(VER)
+	cp -f libmse.so $(MSE_DIR)/lib/$(VER)
+	cp -f libmse.a $(MSE_DIR)/lib/$(VER)
+	cp -f libmseidl.so $(MSE_DIR)/lib/$(VER)
+	mkdir -p $(MSE_DIR)/python/$(VER)
+	cp -f mse.py $(MSE_DIR)/python/$(VER)
+	mkdir -p $(MSE_DIR)/idl/$(VER)
+	cp -f ../idl/* $(MSE_DIR)/idl/$(VER)

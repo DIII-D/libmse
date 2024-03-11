@@ -1,0 +1,29 @@
+
+To build the various MSE libraries do the following.
+
+Set the VER variable in the Makefiles
+
+Make sure the d3/idl_ga library matches the compiler
+being used.
+
+
+on IRIS:
+
+    module purge
+    module load btshot/efit idl mdsplus
+    make clean all
+
+    #also do
+
+    module purge
+    module load env/gcc9.2 idl mdsplus
+    make -f Makefile-gnu clean all
+
+
+on OMEGA:
+
+    use LIBS_DIR for the d3 library
+
+    module purge
+    module load env/gcc8.x idl mdsplus
+    make -f Makefile-gnu clean all
